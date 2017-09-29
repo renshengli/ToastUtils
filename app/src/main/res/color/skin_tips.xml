@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 各种tips, 小灰条, 的文本颜色, 无按下态 -->
+<!-- 重要. 这里颜色必须写死色值. 不要写@color/XXX, 否则换肤将出问题!!! -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#ffffff"/>
+</selector>
