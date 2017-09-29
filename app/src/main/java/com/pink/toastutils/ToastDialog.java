@@ -50,7 +50,7 @@ public class ToastDialog extends Dialog implements IToast {
 
     @Override
     public void show() {
-        super.show();
+        //super.show();
         mQueue.offer(new WeakReference<ToastDialog>(this));
         if (0 == mAtomicInteger.get()) {
             mAtomicInteger.incrementAndGet();
@@ -89,11 +89,19 @@ public class ToastDialog extends Dialog implements IToast {
     }
 
     private void handleShow() {
-        super.show();
+        try {
+            super.show();
+        } catch(Exception e) {
+            // may be application exceiton
+        }
     }
 
     private void handleHide() {
-        super.cancel();
+        try {
+            super.cancel();
+        } catch (Exception e) {
+            // not attached to window manager
+        }
         mQueue.poll();
     }
 

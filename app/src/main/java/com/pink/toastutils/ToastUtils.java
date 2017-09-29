@@ -29,7 +29,7 @@ public class ToastUtils {
             mStatusBarHeight = getStatusBarHeight(context);
             mIsMX2 = isMX2();
         }
-        mIsNotificationEnabled = true;
+        //mIsNotificationEnabled = false;
         if (mIsNotificationEnabled) {
             return new SystemToast(context, mIsMX2 ? mStatusBarHeight : 0);
         } else {
