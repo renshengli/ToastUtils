@@ -106,12 +106,16 @@ public class ToastDialog extends Dialog implements IToast {
 
     private static void activeQueue() {
         WeakReference<ToastDialog> toastWR = mQueue.peek();
-        if (toastWR == null || toastWR.get() == null) {
+        if (toastWR == null) {
             mAtomicInteger.decrementAndGet();
         } else {
             ToastDialog toast = toastWR.get();
-            mHandler.post(toast.mShow);
-            mHandler.postDelayed(toast.mHide, toast.mDuration);
+            if (toast != null) {
+                mHandler.post(toast.mShow);
+                mHandler.postDelayed(toast.mHide, toast.mDuration);
+            } else {
+                mQueue.poll();
+            }
             mHandler.postDelayed(mActivite, toast.mDuration);
         }
 
