@@ -1,14 +1,12 @@
 package com.pink.toastutils;
 
-import android.app.Dialog;
 import android.content.Context;
+import android.graphics.PixelFormat;
 import android.os.Handler;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.Window;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -17,40 +15,44 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class ToastDialog extends Dialog implements IToast {
-    private static BlockingQueue<WeakReference<ToastDialog>> mQueue =
-            new LinkedBlockingDeque<WeakReference<ToastDialog>>();
+public class ToastWindow implements IToast {
+    private static BlockingQueue<WeakReference<ToastWindow>> mQueue =
+            new LinkedBlockingDeque<WeakReference<ToastWindow>>();
     private static AtomicInteger mAtomicInteger = new AtomicInteger(0);
     private static final int LONG_DELAY = 3500; // 3.5 seconds
     private static final int SHORT_DELAY = 2000; // 2 seconds
     private static Handler mHandler = new Handler();
     private View mLayout = null;
     private long mDuration = Toast.LENGTH_SHORT;
+    private Context mContext;
+    private WindowManager.LayoutParams mParams;
+    private WindowManager mWindowManager;
 
-    public ToastDialog(Context context, int theme, int yOffset) {
-        super(context, theme);
+    public ToastWindow(Context context, int theme, int yOffset) {
+        mContext = context;
+        mWindowManager = (WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE);
         LayoutInflater inflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mLayout = inflater.inflate(R.layout.toast_dialog_base, null);
-        super.addContentView(mLayout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        super.setContentView(mLayout);
-        super.setCancelable(false);
-        Window dialogWindow = super.getWindow();
-        WindowManager.LayoutParams lp = new WindowManager.LayoutParams();
-        lp.copyFrom(dialogWindow.getAttributes());
-        lp.width = WindowManager.LayoutParams.MATCH_PARENT;
-        lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        mParams = new WindowManager.LayoutParams();
+        mParams.height = WindowManager.LayoutParams.WRAP_CONTENT;
+        mParams.width = WindowManager.LayoutParams.MATCH_PARENT;
         if (yOffset > 0) {
-            lp.y = yOffset;
+            mParams.y = yOffset;
         }
-        dialogWindow.setAttributes(lp);
-        dialogWindow.setGravity(Gravity.TOP|Gravity.FILL_HORIZONTAL);
-        dialogWindow.setFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE);
+        mParams.format = PixelFormat.TRANSLUCENT;
+        mParams.windowAnimations = android.R.style.Animation_Toast;
+        mParams.type = WindowManager.LayoutParams.TYPE_TOAST;
+        mParams.setTitle("");
+        mParams.flags = WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON | WindowManager
+                .LayoutParams.FLAG_NOT_FOCUSABLE |
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE;
+        mParams.gravity = Gravity.TOP|Gravity.FILL_HORIZONTAL;
+
     }
 
     @Override
     public void show() {
-        //super.show();
-        mQueue.offer(new WeakReference<ToastDialog>(this));
+        mQueue.offer(new WeakReference<ToastWindow>(this));
         if (0 == mAtomicInteger.get()) {
             mAtomicInteger.incrementAndGet();
             mHandler.post(mActivite);
@@ -89,15 +91,25 @@ public class ToastDialog extends Dialog implements IToast {
 
     private void handleShow() {
         try {
-            super.show();
+            if (mLayout != null) {
+                if (mLayout.getParent() != null) {
+                    mWindowManager.removeView(mLayout);
+                }
+                mWindowManager.addView(mLayout, mParams);
+            }
         } catch(Exception e) {
-            // may be application exceiton
         }
     }
 
     private void handleHide() {
         try {
-            super.cancel();
+            if (mLayout != null) {
+                if (mLayout.getParent() != null) {
+                    mWindowManager.removeView(mLayout);
+                    mQueue.poll();
+                }
+                mLayout = null;
+            }
         } catch (Exception e) {
             // not attached to window manager
         }
@@ -105,11 +117,11 @@ public class ToastDialog extends Dialog implements IToast {
     }
 
     private static void activeQueue() {
-        WeakReference<ToastDialog> toastWR = mQueue.peek();
+        WeakReference<ToastWindow> toastWR = mQueue.peek();
         if (toastWR == null || toastWR.get() == null) {
             mAtomicInteger.decrementAndGet();
         } else {
-            ToastDialog toast = toastWR.get();
+            ToastWindow toast = toastWR.get();
             mHandler.post(toast.mShow);
             mHandler.postDelayed(toast.mHide, toast.mDuration);
             mHandler.postDelayed(mActivite, toast.mDuration);
